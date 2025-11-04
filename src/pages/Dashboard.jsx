@@ -1,26 +1,64 @@
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import api from "../services/api";
+import { walletService } from "../services/walletService";
+import { transactionService } from "../services/transactionService";
+import TransactionTable from "../components/TransactionTable";
+import Pagination from "../components/Pagination";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const [balance, setBalance] = useState("0.00");
+  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    currentPage: 0,
+    pageSize: 10,
+    totalPages: 0,
+    totalElements: 0,
+  });
 
   useEffect(() => {
-    const fetchBalance = async () => {
-      try {
-        const response = await api.get("/wallet/balance");
-        setBalance(response.data.balance);
-      } catch (error) {
-        console.error("Error fetching balance:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBalance();
+    fetchWalletData();
+    fetchTransactions(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchWalletData = async () => {
+    try {
+      const response = await walletService.getWallet();
+      setBalance(response.balance);
+    } catch (error) {
+      console.error("Error fetching wallet data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTransactions = async (page = 0) => {
+    setTransactionsLoading(true);
+    try {
+      const response = await transactionService.getTransactions(
+        page,
+        pagination.pageSize
+      );
+      setTransactions(response.content);
+      setPagination((prev) => ({
+        ...prev,
+        currentPage: response.page,
+        totalPages: response.totalPages,
+        totalElements: response.totalElements,
+      }));
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    fetchTransactions(newPage);
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-NG", {
@@ -53,9 +91,9 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
+        <div className="px-4 py-6 sm:px-0 space-y-6">
           {/* Wallet Balance Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg mb-8">
+          <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0 bg-blue-500 rounded-md p-3">
@@ -87,25 +125,107 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Welcome Message */}
-          <div className="border-4 border-dashed border-gray-200 rounded-lg h-96 p-8">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Welcome to Your Dashboard, {user?.firstName} {user?.lastName}!
+          {/* Transaction History */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Recent Transactions
               </h2>
-              <p className="text-gray-600 mb-2">Email: {user?.email}</p>
-              <p className="text-gray-600 mb-4">
-                Your wallet has been automatically created with a zero balance.
-              </p>
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Next Phase Features:
-                </h3>
-                <ul className="text-gray-600 text-left max-w-md mx-auto">
-                  <li className="mb-2">• Fund your wallet (mock deposits)</li>
-                  <li className="mb-2">• Transfer funds to other users</li>
-                  <li className="mb-2">• View transaction history</li>
-                </ul>
+              <div className="text-sm text-gray-500">
+                {pagination.totalElements > 0 && (
+                  <>Total: {pagination.totalElements} transactions</>
+                )}
+              </div>
+            </div>
+
+            <TransactionTable
+              transactions={transactions}
+              loading={transactionsLoading}
+            />
+
+            {pagination.totalPages > 1 && (
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={handlePageChange}
+              />
+            )}
+          </div>
+
+          {/* Features Preview */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-blue-900 mb-4">
+              Coming Soon
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="bg-blue-100 rounded-full p-3 inline-flex">
+                  <svg
+                    className="h-6 w-6 text-blue-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <h4 className="mt-2 text-sm font-medium text-blue-900">
+                  Fund Wallet
+                </h4>
+                <p className="mt-1 text-xs text-blue-700">
+                  Add money to your wallet
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="bg-blue-100 rounded-full p-3 inline-flex">
+                  <svg
+                    className="h-6 w-6 text-blue-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                    />
+                  </svg>
+                </div>
+                <h4 className="mt-2 text-sm font-medium text-blue-900">
+                  Transfer Funds
+                </h4>
+                <p className="mt-1 text-xs text-blue-700">
+                  Send money to other users
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="bg-blue-100 rounded-full p-3 inline-flex">
+                  <svg
+                    className="h-6 w-6 text-blue-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </div>
+                <h4 className="mt-2 text-sm font-medium text-blue-900">
+                  Transaction Details
+                </h4>
+                <p className="mt-1 text-xs text-blue-700">
+                  View detailed transaction history
+                </p>
               </div>
             </div>
           </div>
