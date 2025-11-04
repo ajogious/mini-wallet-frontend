@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useContext, useEffect } from "react";
+import { authService } from "../services/authService";
 
 const AuthContext = createContext();
 
@@ -13,26 +14,36 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    setIsAuthenticated(!!token);
+    const userData = authService.getCurrentUser();
+
+    if (token && userData) {
+      setIsAuthenticated(true);
+      setUser(userData);
+    }
     setLoading(false);
   }, []);
 
-  const login = (token) => {
+  const login = (token, userData) => {
     localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(userData));
     setIsAuthenticated(true);
+    setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
+    authService.logout();
     setIsAuthenticated(false);
+    setUser(null);
   };
 
   const value = {
     isAuthenticated,
+    user,
     login,
     logout,
     loading,
