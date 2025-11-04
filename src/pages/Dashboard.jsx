@@ -5,6 +5,7 @@ import { transactionService } from "../services/transactionService";
 import TransactionTable from "../components/TransactionTable";
 import Pagination from "../components/Pagination";
 import FundWallet from "../components/FundWallet";
+import TransferFunds from "../components/TransferFunds";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -63,7 +64,10 @@ const Dashboard = () => {
   };
 
   const handleDepositSuccess = () => {
-    // Trigger refresh of wallet data and transactions
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handleTransferSuccess = () => {
     setRefreshTrigger((prev) => prev + 1);
   };
 
@@ -132,8 +136,14 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Fund Wallet Section */}
-          <FundWallet onDepositSuccess={handleDepositSuccess} />
+          {/* Action Cards Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Fund Wallet Section */}
+            <FundWallet onDepositSuccess={handleDepositSuccess} />
+
+            {/* Transfer Funds Section */}
+            <TransferFunds onTransferSuccess={handleTransferSuccess} />
+          </div>
 
           {/* Transaction History */}
           <div className="space-y-4">
@@ -163,57 +173,28 @@ const Dashboard = () => {
           </div>
 
           {/* Features Preview */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-blue-900 mb-4">
-              Coming Soon
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="text-center">
-                <div className="bg-blue-100 rounded-full p-3 inline-flex">
-                  <svg
-                    className="h-6 w-6 text-blue-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                    />
-                  </svg>
-                </div>
-                <h4 className="mt-2 text-sm font-medium text-blue-900">
-                  Transfer Funds
-                </h4>
-                <p className="mt-1 text-xs text-blue-700">
-                  Send money to other users
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="bg-blue-100 rounded-full p-3 inline-flex">
-                  <svg
-                    className="h-6 w-6 text-blue-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                </div>
-                <h4 className="mt-2 text-sm font-medium text-blue-900">
-                  Transaction Details
-                </h4>
-                <p className="mt-1 text-xs text-blue-700">
-                  View detailed transaction history
-                </p>
-              </div>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+            <div className="text-center">
+              <svg
+                className="mx-auto h-8 w-8 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <h3 className="mt-2 text-lg font-semibold text-green-900">
+                All Features Active!
+              </h3>
+              <p className="mt-1 text-sm text-green-700">
+                Your Mini Wallet is now fully functional with deposits and
+                peer-to-peer transfers.
+              </p>
             </div>
           </div>
         </div>
