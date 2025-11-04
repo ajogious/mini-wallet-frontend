@@ -4,6 +4,7 @@ import { walletService } from "../services/walletService";
 import { transactionService } from "../services/transactionService";
 import TransactionTable from "../components/TransactionTable";
 import Pagination from "../components/Pagination";
+import FundWallet from "../components/FundWallet";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -17,12 +18,13 @@ const Dashboard = () => {
     totalPages: 0,
     totalElements: 0,
   });
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     fetchWalletData();
     fetchTransactions(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refreshTrigger]);
 
   const fetchWalletData = async () => {
     try {
@@ -58,6 +60,11 @@ const Dashboard = () => {
 
   const handlePageChange = (newPage) => {
     fetchTransactions(newPage);
+  };
+
+  const handleDepositSuccess = () => {
+    // Trigger refresh of wallet data and transactions
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   const formatCurrency = (amount) => {
@@ -125,6 +132,9 @@ const Dashboard = () => {
             </div>
           </div>
 
+          {/* Fund Wallet Section */}
+          <FundWallet onDepositSuccess={handleDepositSuccess} />
+
           {/* Transaction History */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -157,30 +167,7 @@ const Dashboard = () => {
             <h3 className="text-lg font-semibold text-blue-900 mb-4">
               Coming Soon
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="bg-blue-100 rounded-full p-3 inline-flex">
-                  <svg
-                    className="h-6 w-6 text-blue-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <h4 className="mt-2 text-sm font-medium text-blue-900">
-                  Fund Wallet
-                </h4>
-                <p className="mt-1 text-xs text-blue-700">
-                  Add money to your wallet
-                </p>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="text-center">
                 <div className="bg-blue-100 rounded-full p-3 inline-flex">
                   <svg
