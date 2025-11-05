@@ -1,23 +1,28 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { depositService } from "../services/depositService";
+import { useToast } from "../context/ToastContext";
 
 const FundWallet = ({ onDepositSuccess }) => {
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const { addToast } = useToast();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
     setLoading(true);
 
     try {
       // Validate amount
       const depositAmount = parseFloat(amount);
       if (isNaN(depositAmount) || depositAmount <= 0) {
-        setError("Please enter a valid amount greater than 0");
+        addToast("Please enter a valid amount greater than 0", "error");
+        setLoading(false);
+        return;
+      }
+
+      if (depositAmount > 1000000) {
+        // Limit to 1,000,000
+        addToast("Maximum deposit amount is ₦1,000,000", "error");
         setLoading(false);
         return;
       }
@@ -25,7 +30,10 @@ const FundWallet = ({ onDepositSuccess }) => {
       const response = await depositService.deposit(depositAmount);
 
       if (response.success) {
-        setSuccess(`Successfully deposited ₦${depositAmount.toLocaleString()}`);
+        addToast(
+          `Successfully deposited ₦${depositAmount.toLocaleString()}`,
+          "success"
+        );
         setAmount("");
 
         // Notify parent component to refresh data
@@ -33,12 +41,10 @@ const FundWallet = ({ onDepositSuccess }) => {
           onDepositSuccess();
         }
       } else {
-        setError(response.message || "Deposit failed");
+        addToast(response.message || "Deposit failed", "error");
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Deposit failed. Please try again."
-      );
+      addToast(err.userMessage || "Deposit failed. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -47,7 +53,7 @@ const FundWallet = ({ onDepositSuccess }) => {
   const handleAmountChange = (e) => {
     const value = e.target.value;
     // Allow only numbers and decimal point
-    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+    if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
       setAmount(value);
     }
   };
@@ -61,18 +67,6 @@ const FundWallet = ({ onDepositSuccess }) => {
           Fund Your Wallet
         </h3>
 
-        {error && (
-          <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-            {success}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Quick Amount Buttons */}
           <div>
@@ -85,7 +79,8 @@ const FundWallet = ({ onDepositSuccess }) => {
                   key={quickAmount}
                   type="button"
                   onClick={() => setAmount(quickAmount.toString())}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  disabled={loading}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                 >
                   {quickAmount.toLocaleString()}
                 </button>
@@ -112,7 +107,7 @@ const FundWallet = ({ onDepositSuccess }) => {
                 value={amount}
                 onChange={handleAmountChange}
                 placeholder="0.00"
-                className="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:opacity-50"
                 disabled={loading}
               />
               <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -120,7 +115,7 @@ const FundWallet = ({ onDepositSuccess }) => {
               </div>
             </div>
             <p className="mt-1 text-sm text-gray-500">
-              Enter the amount you want to deposit
+              Enter amount between ₦0.01 and ₦1,000,000
             </p>
           </div>
 
@@ -129,7 +124,7 @@ const FundWallet = ({ onDepositSuccess }) => {
             <button
               type="submit"
               disabled={loading || !amount || parseFloat(amount) <= 0}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -160,36 +155,6 @@ const FundWallet = ({ onDepositSuccess }) => {
             </button>
           </div>
         </form>
-
-        {/* Information Box */}
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-blue-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h4 className="text-sm font-medium text-blue-800">
-                Mock Deposit
-              </h4>
-              <p className="text-sm text-blue-700 mt-1">
-                This is a demonstration. No real money is being transferred. The
-                deposit will instantly update your wallet balance.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

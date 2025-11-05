@@ -1,14 +1,15 @@
 import React, { useState } from "react";
 import { transferService } from "../services/transferService";
+import { useToast } from "../context/ToastContext";
 
 const TransferFunds = ({ onTransferSuccess }) => {
   const [formData, setFormData] = useState({
     amount: "",
     recipientEmail: "",
   });
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const { addToast } = useToast();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -16,50 +17,86 @@ const TransferFunds = ({ onTransferSuccess }) => {
       ...prev,
       [name]: value,
     }));
+
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: "",
+      });
+    }
   };
 
   const handleAmountChange = (e) => {
     const value = e.target.value;
-    // Allow only numbers and decimal point
-    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+    // Allow only numbers and decimal point with max 2 decimal places
+    if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
       setFormData((prev) => ({
         ...prev,
         amount: value,
       }));
+
+      // Clear amount error when user starts typing
+      if (errors.amount) {
+        setErrors({
+          ...errors,
+          amount: "",
+        });
+      }
     }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Validate recipient email
+    if (!formData.recipientEmail) {
+      newErrors.recipientEmail = "Recipient email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.recipientEmail)) {
+      newErrors.recipientEmail = "Recipient email is invalid";
+    }
+
+    // Validate amount
+    if (!formData.amount) {
+      newErrors.amount = "Amount is required";
+    } else {
+      const amount = parseFloat(formData.amount);
+      if (isNaN(amount) || amount <= 0) {
+        newErrors.amount = "Amount must be greater than 0";
+      } else if (amount > 1000000) {
+        // Limit to 1,000,000
+        newErrors.amount = "Maximum transfer amount is ₦1,000,000";
+      } else if (amount < 1) {
+        newErrors.amount = "Minimum transfer amount is ₦1";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
+
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Validate form data
       const amount = parseFloat(formData.amount);
-      if (isNaN(amount) || amount <= 0) {
-        setError("Please enter a valid amount greater than 0");
-        setLoading(false);
-        return;
-      }
-
-      if (!formData.recipientEmail || !formData.recipientEmail.includes("@")) {
-        setError("Please enter a valid recipient email");
-        setLoading(false);
-        return;
-      }
-
       const response = await transferService.transfer(
         amount,
         formData.recipientEmail
       );
 
       if (response.success) {
-        setSuccess(
+        addToast(
           `Successfully transferred ₦${amount.toLocaleString()} to ${
             response.recipientEmail
-          }`
+          }`,
+          "success"
         );
         setFormData({
           amount: "",
@@ -71,11 +108,12 @@ const TransferFunds = ({ onTransferSuccess }) => {
           onTransferSuccess();
         }
       } else {
-        setError(response.message || "Transfer failed");
+        addToast(response.message || "Transfer failed", "error");
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Transfer failed. Please try again."
+      addToast(
+        err.userMessage || "Transfer failed. Please try again.",
+        "error"
       );
     } finally {
       setLoading(false);
@@ -90,18 +128,6 @@ const TransferFunds = ({ onTransferSuccess }) => {
         <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
           Transfer Funds
         </h3>
-
-        {error && (
-          <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-            {success}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Recipient Email */}
@@ -119,10 +145,17 @@ const TransferFunds = ({ onTransferSuccess }) => {
               value={formData.recipientEmail}
               onChange={handleChange}
               placeholder="Enter recipient's email address"
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className={`block w-full px-3 py-2 border rounded-md focus:ring-green-500 focus:border-green-500 sm:text-sm ${
+                errors.recipientEmail ? "border-red-300" : "border-gray-300"
+              } disabled:opacity-50`}
               disabled={loading}
               required
             />
+            {errors.recipientEmail && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.recipientEmail}
+              </p>
+            )}
           </div>
 
           {/* Quick Amount Buttons */}
@@ -141,7 +174,8 @@ const TransferFunds = ({ onTransferSuccess }) => {
                       amount: quickAmount.toString(),
                     }))
                   }
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  disabled={loading}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
                 >
                   {quickAmount.toLocaleString()}
                 </button>
@@ -168,7 +202,9 @@ const TransferFunds = ({ onTransferSuccess }) => {
                 value={formData.amount}
                 onChange={handleAmountChange}
                 placeholder="0.00"
-                className="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className={`block w-full pl-7 pr-12 py-2 border rounded-md focus:ring-green-500 focus:border-green-500 sm:text-sm ${
+                  errors.amount ? "border-red-300" : "border-gray-300"
+                } disabled:opacity-50`}
                 disabled={loading}
                 required
               />
@@ -176,6 +212,13 @@ const TransferFunds = ({ onTransferSuccess }) => {
                 <span className="text-gray-500 sm:text-sm">NGN</span>
               </div>
             </div>
+            {errors.amount ? (
+              <p className="mt-1 text-sm text-red-600">{errors.amount}</p>
+            ) : (
+              <p className="mt-1 text-sm text-gray-500">
+                Enter amount between ₦1 and ₦1,000,000
+              </p>
+            )}
           </div>
 
           {/* Submit Button */}
@@ -188,7 +231,7 @@ const TransferFunds = ({ onTransferSuccess }) => {
                 !formData.recipientEmail ||
                 parseFloat(formData.amount) <= 0
               }
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -247,6 +290,7 @@ const TransferFunds = ({ onTransferSuccess }) => {
                 <p>• Transfers are instant and cannot be reversed</p>
                 <p>• Ensure you have sufficient balance before transferring</p>
                 <p>• You cannot transfer funds to yourself</p>
+                <p>• Maximum transfer amount: ₦1,000,000 per transaction</p>
               </div>
             </div>
           </div>

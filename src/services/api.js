@@ -4,6 +4,7 @@ const API_BASE_URL = "http://localhost:8080/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 10000, // 10 seconds timeout
 });
 
 // Request interceptor to add auth token
@@ -29,6 +30,20 @@ api.interceptors.response.use(
       localStorage.removeItem("user");
       window.location.href = "/login";
     }
+
+    // Extract clean error message from response
+    if (error.response?.data) {
+      const backendError = error.response.data;
+      error.userMessage =
+        backendError.message || backendError.error || "An error occurred";
+    } else if (error.code === "NETWORK_ERROR") {
+      error.userMessage = "Network error. Please check your connection.";
+    } else if (error.code === "TIMEOUT_ERROR") {
+      error.userMessage = "Request timeout. Please try again.";
+    } else {
+      error.userMessage = "An unexpected error occurred. Please try again.";
+    }
+
     return Promise.reject(error);
   }
 );

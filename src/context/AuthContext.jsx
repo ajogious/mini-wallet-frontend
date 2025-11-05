@@ -1,9 +1,9 @@
-/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { authService } from "../services/authService";
 
 const AuthContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -36,9 +36,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    authService.logout();
+    // Clear all storage
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    sessionStorage.clear();
+
+    // Reset state
     setIsAuthenticated(false);
     setUser(null);
+
+    // Redirect to login
+    window.location.href = "/login";
   };
 
   const value = {
