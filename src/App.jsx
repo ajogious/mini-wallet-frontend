@@ -11,6 +11,7 @@ import ToastContainer from "./components/ToastContainer";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import TransactionDetails from "./pages/TransactionDetails";
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -94,6 +95,14 @@ function AppContent() {
                   <p className="text-gray-600 mt-2">Page not found</p>
                 </div>
               </div>
+            }
+          />
+          <Route
+            path="/transactions/:transactionId"
+            element={
+              <ProtectedRoute>
+                <TransactionDetails />
+              </ProtectedRoute>
             }
           />
         </Routes>

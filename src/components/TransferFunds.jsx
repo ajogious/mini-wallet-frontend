@@ -1,62 +1,51 @@
 import { useState } from "react";
 import { transferService } from "../services/transferService";
 import { useToast } from "../context/ToastContext";
+import PinModal from "./PinModal";
 
 const TransferFunds = ({ onTransferSuccess }) => {
   const [formData, setFormData] = useState({
     amount: "",
     recipientEmail: "",
   });
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [transferData, setTransferData] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const { addToast } = useToast();
 
+  // ✅ Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Clear error when user starts typing
     if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: "",
-      });
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
+  // ✅ Amount input validation
   const handleAmountChange = (e) => {
     const value = e.target.value;
-    // Allow only numbers and decimal point with max 2 decimal places
     if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
-      setFormData((prev) => ({
-        ...prev,
-        amount: value,
-      }));
+      setFormData((prev) => ({ ...prev, amount: value }));
 
-      // Clear amount error when user starts typing
       if (errors.amount) {
-        setErrors({
-          ...errors,
-          amount: "",
-        });
+        setErrors((prev) => ({ ...prev, amount: "" }));
       }
     }
   };
 
+  // ✅ Validate email + amount
   const validateForm = () => {
     const newErrors = {};
 
-    // Validate recipient email
     if (!formData.recipientEmail) {
       newErrors.recipientEmail = "Recipient email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.recipientEmail)) {
       newErrors.recipientEmail = "Recipient email is invalid";
     }
 
-    // Validate amount
     if (!formData.amount) {
       newErrors.amount = "Amount is required";
     } else {
@@ -64,7 +53,6 @@ const TransferFunds = ({ onTransferSuccess }) => {
       if (isNaN(amount) || amount <= 0) {
         newErrors.amount = "Amount must be greater than 0";
       } else if (amount > 1000000) {
-        // Limit to 1,000,000
         newErrors.amount = "Maximum transfer amount is ₦1,000,000";
       } else if (amount < 1) {
         newErrors.amount = "Minimum transfer amount is ₦1";
@@ -75,38 +63,40 @@ const TransferFunds = ({ onTransferSuccess }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  // ✅ Show PIN modal only
+  const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
+    setTransferData({
+      amount: parseFloat(formData.amount),
+      recipientEmail: formData.recipientEmail,
+    });
+    setShowPinModal(true);
+  };
+
+  // ✅ Confirm transfer with PIN
+  const handlePinVerify = async (pin) => {
     setLoading(true);
-
     try {
-      const amount = parseFloat(formData.amount);
       const response = await transferService.transfer(
-        amount,
-        formData.recipientEmail
+        transferData.amount,
+        transferData.recipientEmail,
+        pin
       );
 
       if (response.success) {
         addToast(
-          `Successfully transferred ₦${amount.toLocaleString()} to ${
-            response.recipientEmail
+          `Successfully transferred ₦${transferData.amount.toLocaleString()} to ${
+            transferData.recipientEmail
           }`,
           "success"
         );
-        setFormData({
-          amount: "",
-          recipientEmail: "",
-        });
 
-        // Notify parent component to refresh data
-        if (onTransferSuccess) {
-          onTransferSuccess();
-        }
+        setFormData({ amount: "", recipientEmail: "" });
+        setTransferData(null);
+        if (onTransferSuccess) onTransferSuccess();
       } else {
         addToast(response.message || "Transfer failed", "error");
       }
@@ -117,6 +107,7 @@ const TransferFunds = ({ onTransferSuccess }) => {
       );
     } finally {
       setLoading(false);
+      setShowPinModal(false);
     }
   };
 
@@ -148,7 +139,7 @@ const TransferFunds = ({ onTransferSuccess }) => {
               className={`block w-full px-3 py-2 border rounded-md focus:ring-green-500 focus:border-green-500 sm:text-sm ${
                 errors.recipientEmail ? "border-red-300" : "border-gray-300"
               } disabled:opacity-50`}
-              disabled={loading}
+              disabled={loading || showPinModal}
               required
             />
             {errors.recipientEmail && (
@@ -174,7 +165,7 @@ const TransferFunds = ({ onTransferSuccess }) => {
                       amount: quickAmount.toString(),
                     }))
                   }
-                  disabled={loading}
+                  disabled={loading || showPinModal}
                   className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
                 >
                   {quickAmount.toLocaleString()}
@@ -205,7 +196,7 @@ const TransferFunds = ({ onTransferSuccess }) => {
                 className={`block w-full pl-7 pr-12 py-2 border rounded-md focus:ring-green-500 focus:border-green-500 sm:text-sm ${
                   errors.amount ? "border-red-300" : "border-gray-300"
                 } disabled:opacity-50`}
-                disabled={loading}
+                disabled={loading || showPinModal}
                 required
               />
               <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -263,7 +254,7 @@ const TransferFunds = ({ onTransferSuccess }) => {
           </div>
         </form>
 
-        {/* Information Box */}
+        {/* Info Box */}
         <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
           <div className="flex">
             <div className="flex-shrink-0">
@@ -296,6 +287,15 @@ const TransferFunds = ({ onTransferSuccess }) => {
           </div>
         </div>
       </div>
+
+      {/* PIN Modal */}
+      <PinModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onVerify={handlePinVerify}
+        title="Confirm Transfer"
+        description="Enter your PIN to confirm the transfer"
+      />
     </div>
   );
 };

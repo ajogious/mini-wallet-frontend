@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 const TransactionTable = ({ transactions, loading }) => {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-NG", {
@@ -112,9 +114,12 @@ const TransactionTable = ({ transactions, loading }) => {
                 {transactions.map((transaction) => (
                   <tr key={transaction.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                      <Link
+                        to={`/transactions/${transaction.id}`}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-900 hover:underline"
+                      >
                         {transaction.description}
-                      </div>
+                      </Link>
                       <div className="text-sm text-gray-500 capitalize">
                         {transaction.transactionType.toLowerCase()}
                       </div>
