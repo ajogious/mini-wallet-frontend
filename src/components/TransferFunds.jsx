@@ -26,13 +26,27 @@ const TransferFunds = ({ onTransferSuccess }) => {
 
   // ✅ Amount input validation
   const handleAmountChange = (e) => {
-    const value = e.target.value;
-    if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
-      setFormData((prev) => ({ ...prev, amount: value }));
+    let rawValue = e.target.value.replace(/,/g, ""); // remove commas
 
-      if (errors.amount) {
-        setErrors((prev) => ({ ...prev, amount: "" }));
-      }
+    // Allow numbers + optional decimal with up to 2 decimal digits
+    if (!/^\d*\.?\d{0,2}$/.test(rawValue)) return;
+
+    // Split integer and decimal parts
+    const [integerPart, decimalPart] = rawValue.split(".");
+
+    // Format integer part with commas
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+    // Combine formatted parts
+    const formattedValue =
+      decimalPart !== undefined
+        ? `${formattedInteger}.${decimalPart}`
+        : formattedInteger;
+
+    setFormData((prev) => ({ ...prev, amount: formattedValue }));
+
+    if (errors.amount) {
+      setErrors((prev) => ({ ...prev, amount: "" }));
     }
   };
 
@@ -49,7 +63,7 @@ const TransferFunds = ({ onTransferSuccess }) => {
     if (!formData.amount) {
       newErrors.amount = "Amount is required";
     } else {
-      const amount = parseFloat(formData.amount);
+      const amount = parseFloat(formData.amount.replace(/,/g, ""));
       if (isNaN(amount) || amount <= 0) {
         newErrors.amount = "Amount must be greater than 0";
       } else if (amount > 1000000) {
@@ -70,7 +84,7 @@ const TransferFunds = ({ onTransferSuccess }) => {
     if (!validateForm()) return;
 
     setTransferData({
-      amount: parseFloat(formData.amount),
+      amount: parseFloat(formData.amount.replace(/,/g, "")),
       recipientEmail: formData.recipientEmail,
     });
     setShowPinModal(true);
@@ -162,7 +176,7 @@ const TransferFunds = ({ onTransferSuccess }) => {
                   onClick={() =>
                     setFormData((prev) => ({
                       ...prev,
-                      amount: quickAmount.toString(),
+                      amount: quickAmount.toLocaleString(),
                     }))
                   }
                   disabled={loading || showPinModal}

@@ -13,7 +13,7 @@ const FundWallet = ({ onDepositSuccess }) => {
 
     try {
       // Validate amount
-      const depositAmount = parseFloat(amount);
+      const depositAmount = parseFloat(amount.replace(/,/g, ""));
       if (isNaN(depositAmount) || depositAmount <= 0) {
         addToast("Please enter a valid amount greater than 0", "error");
         setLoading(false);
@@ -51,11 +51,24 @@ const FundWallet = ({ onDepositSuccess }) => {
   };
 
   const handleAmountChange = (e) => {
-    const value = e.target.value;
-    // Allow only numbers and decimal point
-    if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
-      setAmount(value);
-    }
+    let rawValue = e.target.value.replace(/,/g, ""); // remove commas
+
+    // Allow only numbers and up to 2 decimal places
+    if (!/^\d*\.?\d{0,2}$/.test(rawValue)) return;
+
+    // Split integer and decimal parts
+    const [integerPart, decimalPart] = rawValue.split(".");
+
+    // Format integer part with commas
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+    // Rebuild formatted value
+    const formattedValue =
+      decimalPart !== undefined
+        ? `${formattedInteger}.${decimalPart}`
+        : formattedInteger;
+
+    setAmount(formattedValue);
   };
 
   const quickAmounts = [500, 1000, 2000, 5000, 10000];
@@ -78,7 +91,7 @@ const FundWallet = ({ onDepositSuccess }) => {
                 <button
                   key={quickAmount}
                   type="button"
-                  onClick={() => setAmount(quickAmount.toString())}
+                  onClick={() => setAmount(quickAmount.toLocaleString())}
                   disabled={loading}
                   className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                 >
