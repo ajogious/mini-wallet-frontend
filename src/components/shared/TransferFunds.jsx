@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { transferService } from "../services/transferService";
-import { useToast } from "../context/ToastContext";
-import PinModal from "./PinModal";
-import { pinService } from "../services/pinService";
+import { transferService } from "../../services/transferService";
+import { useToast } from "../../context/ToastContext";
+import PinModal from "../../components/shared/PinModal";
+import { pinService } from "../../services/pinService";
 
 const TransferFunds = ({ onTransferSuccess }) => {
   const [formData, setFormData] = useState({

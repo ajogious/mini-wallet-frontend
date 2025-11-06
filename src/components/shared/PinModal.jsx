@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { useToast } from "../context/ToastContext";
-import api from "../services/api";
+import { useToast } from "../../context/ToastContext";
+import api from "../../services/api";
 
 const PinModal = ({
   isOpen,
@@ -114,7 +114,7 @@ const PinModal = ({
                 <input
                   key={index}
                   ref={(el) => (inputRefs.current[index] = el)}
-                  type="text"
+                  type="password"
                   inputMode="numeric"
                   maxLength="1"
                   value={digit}

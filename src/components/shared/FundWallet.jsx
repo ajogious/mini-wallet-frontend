@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { depositService } from "../services/depositService";
-import { useToast } from "../context/ToastContext";
+import { depositService } from "../../services/depositService";
+import { useToast } from "../../context/ToastContext";
 
 const FundWallet = ({ onDepositSuccess }) => {
   const [amount, setAmount] = useState("");

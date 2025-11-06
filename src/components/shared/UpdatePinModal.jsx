@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useToast } from "../context/ToastContext";
-import { pinService } from "../services/pinService";
+import { useToast } from "../../context/ToastContext";
+import { pinService } from "../../services/pinService";
 
 const UpdatePinModal = ({ isOpen, onClose, onSuccess }) => {
   const [currentPin, setCurrentPin] = useState(["", "", "", ""]);
