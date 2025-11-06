@@ -2,6 +2,7 @@ import { useState } from "react";
 import { transferService } from "../services/transferService";
 import { useToast } from "../context/ToastContext";
 import PinModal from "./PinModal";
+import { pinService } from "../services/pinService";
 
 const TransferFunds = ({ onTransferSuccess }) => {
   const [formData, setFormData] = useState({
@@ -78,16 +79,41 @@ const TransferFunds = ({ onTransferSuccess }) => {
   };
 
   // ✅ Show PIN modal only
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!validateForm()) return;
 
-    setTransferData({
-      amount: parseFloat(formData.amount.replace(/,/g, "")),
-      recipientEmail: formData.recipientEmail,
-    });
-    setShowPinModal(true);
+    try {
+      setLoading(true);
+
+      // ✅ Step 1: Check if user's PIN is default
+      const res = await pinService.getCurrentPin();
+
+      if (res.isDefaultPin) {
+        addToast(
+          "Your PIN is still set to default (0000). Please update your PIN before making transfers.",
+          "warning"
+        );
+
+        setLoading(false);
+        setFormData({ amount: "", recipientEmail: "" });
+        setTransferData(null);
+        return; // stop transfer
+      }
+
+      // ✅ Step 2: Proceed with transfer (show PIN modal)
+      setTransferData({
+        amount: parseFloat(formData.amount.replace(/,/g, "")),
+        recipientEmail: formData.recipientEmail,
+      });
+      setShowPinModal(true);
+      // eslint-disable-next-line no-unused-vars
+    } catch (err) {
+      addToast("Unable to verify your PIN. Please try again later.", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ✅ Confirm transfer with PIN

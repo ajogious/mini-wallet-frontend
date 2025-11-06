@@ -10,4 +10,11 @@ export const pinService = {
     const response = await api.post("/wallet/verify-pin", { pin });
     return response.data;
   },
+
+  getCurrentPin: async () => {
+    const response = await api.get("/wallet/pin-status");
+    console.log(response.data);
+
+    return response.data;
+  },
 };

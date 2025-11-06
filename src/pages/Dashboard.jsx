@@ -577,16 +577,63 @@ const BalanceCard = ({ balance, walletLoading, formatCurrency }) => (
         <div className="flex items-center">
           <div className="flex-shrink-0 bg-blue-500 rounded-lg p-3">
             <svg
-              className="h-8 w-8 text-white"
-              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
-              stroke="currentColor"
+              fill="currentColor"
+              className="h-8 w-8 text-white"
             >
-              <path
+              {/* Circle background */}
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              {/* Naira symbol inside */}
+              <line
+                x1="6"
+                y1="9.5"
+                x2="18"
+                y2="9.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <line
+                x1="6"
+                y1="14.5"
+                x2="18"
+                y2="14.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <line
+                x1="9"
+                y1="6"
+                x2="9"
+                y2="18"
+                stroke="currentColor"
+                strokeWidth="1.5"
                 strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+              <line
+                x1="9"
+                y1="6"
+                x2="15"
+                y2="18"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="15"
+                y1="6"
+                x2="15"
+                y2="18"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
               />
             </svg>
           </div>
