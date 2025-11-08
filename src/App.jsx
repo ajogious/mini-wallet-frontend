@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import TransactionDetails from "./pages/TransactionDetails";
+import BVNVerificationPage from "./pages/BVNVerificationPage";
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -102,6 +103,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <TransactionDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/verify-bvn"
+            element={
+              <ProtectedRoute>
+                <BVNVerificationPage />
               </ProtectedRoute>
             }
           />

@@ -8,14 +8,19 @@ const Register = () => {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    otherName: "",
     email: "",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
+    bvn: "",
+    dateOfBirth: "",
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showBVNSection, setShowBVNSection] = useState(false);
 
   const { login } = useAuth();
   const { addToast } = useToast();
@@ -72,6 +77,17 @@ const Register = () => {
         "Last name can only contain letters, spaces, hyphens, and apostrophes";
     }
 
+    // Other Name validation (optional)
+    if (formData.otherName && formData.otherName.length > 50) {
+      newErrors.otherName = "Other name must be less than 50 characters";
+    } else if (
+      formData.otherName &&
+      !/^[a-zA-Z\s'-]+$/.test(formData.otherName)
+    ) {
+      newErrors.otherName =
+        "Other name can only contain letters, spaces, hyphens, and apostrophes";
+    }
+
     // Email validation
     if (!formData.email) {
       newErrors.email = "Email is required";
@@ -79,6 +95,17 @@ const Register = () => {
       newErrors.email = "Email address is invalid";
     } else if (formData.email.length > 100) {
       newErrors.email = "Email must be less than 100 characters";
+    }
+
+    // Phone Number validation
+    if (!formData.phoneNumber) {
+      newErrors.phoneNumber = "Phone number is required";
+    } else if (
+      !/^(\+?234|0)[7-9][0-1]\d{8}$/.test(
+        formData.phoneNumber.replace(/\s/g, "")
+      )
+    ) {
+      newErrors.phoneNumber = "Please provide a valid Nigerian phone number";
     }
 
     // Password validation
@@ -103,6 +130,16 @@ const Register = () => {
       newErrors.confirmPassword = "Please confirm your password";
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
+    }
+
+    // BVN validation (if provided)
+    if (showBVNSection && formData.bvn && !/^\d{11}$/.test(formData.bvn)) {
+      newErrors.bvn = "BVN must be exactly 11 digits";
+    }
+
+    // Date of Birth validation (if BVN provided)
+    if (showBVNSection && formData.bvn && !formData.dateOfBirth) {
+      newErrors.dateOfBirth = "Date of birth is required for BVN verification";
     }
 
     setErrors(newErrors);
@@ -149,10 +186,27 @@ const Register = () => {
 
     try {
       const { ...registerData } = formData;
+
+      // Format phone number by removing any spaces
+      if (registerData.phoneNumber) {
+        registerData.phoneNumber = registerData.phoneNumber.replace(/\s/g, "");
+      }
+
       const response = await authService.register(registerData);
-      login(response.token, response.user);
-      addToast("Registration successful! Welcome to Mini Wallet!", "success");
-      navigate("/dashboard");
+
+      if (response.token) {
+        login(response.token, response.user);
+        addToast("Registration successful! Welcome to Mini Wallet!", "success");
+
+        if (response.user.verificationStatus === "VERIFIED") {
+          navigate("/dashboard");
+        } else {
+          // User needs BVN verification
+          navigate("/verify-bvn");
+        }
+      } else {
+        addToast("Registration failed. Please try again.", "error");
+      }
     } catch (err) {
       addToast(
         err.userMessage || "Registration failed. Please try again.",
@@ -160,6 +214,59 @@ const Register = () => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const formatDateForInput = (dateString) => {
+    if (dateString && dateString.includes("-")) {
+      const [day, month, year] = dateString.split("-");
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+    return dateString;
+  };
+
+  const formatDateForSubmit = (dateString) => {
+    if (dateString && dateString.includes("-")) {
+      const [year, month, day] = dateString.split("-");
+      return `${day.padStart(2, "0")}-${month.padStart(2, "0")}-${year}`;
+    }
+    return dateString;
+  };
+
+  const formatPhoneNumber = (value) => {
+    // Remove all non-digit characters
+    const cleaned = value.replace(/\D/g, "");
+
+    // Format based on Nigerian phone number patterns
+    if (cleaned.startsWith("234")) {
+      return `+${cleaned.substring(0, 3)} ${cleaned.substring(
+        3,
+        6
+      )} ${cleaned.substring(6, 9)} ${cleaned.substring(9)}`;
+    } else if (cleaned.startsWith("0")) {
+      return `0${cleaned.substring(1, 4)} ${cleaned.substring(
+        4,
+        7
+      )} ${cleaned.substring(7, 11)}`;
+    }
+
+    return value;
+  };
+
+  const handlePhoneChange = (e) => {
+    const { value } = e.target;
+    const formattedValue = formatPhoneNumber(value);
+
+    setFormData({
+      ...formData,
+      phoneNumber: formattedValue,
+    });
+
+    if (errors.phoneNumber) {
+      setErrors({
+        ...errors,
+        phoneNumber: "",
+      });
     }
   };
 
@@ -191,7 +298,7 @@ const Register = () => {
                   htmlFor="firstName"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  First Name
+                  First Name *
                 </label>
                 <input
                   id="firstName"
@@ -217,7 +324,7 @@ const Register = () => {
                   htmlFor="lastName"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Last Name
+                  Last Name *
                 </label>
                 <input
                   id="lastName"
@@ -238,13 +345,39 @@ const Register = () => {
               </div>
             </div>
 
+            {/* Other Name Field */}
+            <div>
+              <label
+                htmlFor="otherName"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Other Name (Optional)
+              </label>
+              <input
+                id="otherName"
+                name="otherName"
+                type="text"
+                autoComplete="additional-name"
+                className={`appearance-none relative block w-full px-3 py-2 border placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                  errors.otherName ? "border-red-300" : "border-gray-300"
+                } disabled:opacity-50`}
+                placeholder="Middle name or other names"
+                value={formData.otherName}
+                onChange={handleChange}
+                disabled={loading}
+              />
+              {errors.otherName && (
+                <p className="mt-1 text-sm text-red-600">{errors.otherName}</p>
+              )}
+            </div>
+
             {/* Email Field */}
             <div>
               <label
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Email address
+                Email address *
               </label>
               <input
                 id="email"
@@ -264,13 +397,45 @@ const Register = () => {
               )}
             </div>
 
+            {/* Phone Number Field */}
+            <div>
+              <label
+                htmlFor="phoneNumber"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Phone Number *
+              </label>
+              <input
+                id="phoneNumber"
+                name="phoneNumber"
+                type="tel"
+                autoComplete="tel"
+                className={`appearance-none relative block w-full px-3 py-2 border placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                  errors.phoneNumber ? "border-red-300" : "border-gray-300"
+                } disabled:opacity-50`}
+                placeholder="e.g., 0801 234 5678 or +234 801 234 5678"
+                value={formData.phoneNumber}
+                onChange={handlePhoneChange}
+                disabled={loading}
+              />
+              {errors.phoneNumber && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.phoneNumber}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Enter your phone number. We'll send important updates via
+                WhatsApp.
+              </p>
+            </div>
+
             {/* Password Field */}
             <div>
               <label
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Password
+                Password *
               </label>
               <div className="relative">
                 <input
@@ -409,7 +574,7 @@ const Register = () => {
                 htmlFor="confirmPassword"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Confirm Password
+                Confirm Password *
               </label>
               <div className="relative">
                 <input
@@ -482,6 +647,105 @@ const Register = () => {
                   </p>
                 )}
             </div>
+
+            {/* BVN Section Toggle */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">
+                    BVN Verification (Optional)
+                  </h4>
+                  <p className="text-sm text-gray-500">
+                    Verify now to activate your account immediately
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowBVNSection(!showBVNSection)}
+                  className="relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  style={{
+                    backgroundColor: showBVNSection ? "#2563eb" : "#d1d5db",
+                  }}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
+                      showBVNSection ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* BVN Fields (Conditional) */}
+            {showBVNSection && (
+              <div className="space-y-4 p-4 bg-blue-50 rounded-md border border-blue-200">
+                <div>
+                  <label
+                    htmlFor="bvn"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    BVN (Bank Verification Number)
+                  </label>
+                  <input
+                    id="bvn"
+                    name="bvn"
+                    type="text"
+                    className={`block w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                      errors.bvn ? "border-red-300" : "border-gray-300"
+                    } disabled:opacity-50`}
+                    placeholder="Enter your 11-digit BVN"
+                    value={formData.bvn}
+                    onChange={handleChange}
+                    disabled={loading}
+                    maxLength={11}
+                  />
+                  {errors.bvn && (
+                    <p className="mt-1 text-sm text-red-600">{errors.bvn}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="dateOfBirth"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Date of Birth (as registered with BVN)
+                  </label>
+                  <input
+                    type="date"
+                    id="dateOfBirth"
+                    name="dateOfBirth"
+                    value={formatDateForInput(formData.dateOfBirth)}
+                    onChange={(e) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        dateOfBirth: formatDateForSubmit(e.target.value),
+                      }));
+                      if (errors.dateOfBirth) {
+                        setErrors((prev) => ({ ...prev, dateOfBirth: "" }));
+                      }
+                    }}
+                    className={`block w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                      errors.dateOfBirth ? "border-red-300" : "border-gray-300"
+                    } disabled:opacity-50`}
+                    disabled={loading}
+                  />
+                  {errors.dateOfBirth && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.dateOfBirth}
+                    </p>
+                  )}
+                </div>
+
+                <div className="p-3 bg-white rounded border">
+                  <p className="text-xs text-gray-600">
+                    <strong>Note:</strong> Verifying your BVN now will activate
+                    your account immediately and set your transaction limit to
+                    ₦5,000,000. You can also verify later in your dashboard.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Submit Button */}
@@ -559,8 +823,8 @@ const Register = () => {
               </h4>
               <p className="text-sm text-blue-700 mt-1">
                 We use bank-level security to protect your personal and
-                financial information. Your password is encrypted and never
-                stored in plain text.
+                financial information. Your BVN and password are encrypted and
+                never stored in plain text.
               </p>
             </div>
           </div>

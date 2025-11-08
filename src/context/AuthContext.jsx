@@ -16,6 +16,8 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [requiresOTP, setRequiresOTP] = useState(false);
+  const [loginIdentifier, setLoginIdentifier] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -28,31 +30,45 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = (token, userData) => {
+  const login = (token, userData, otpRequired = false, identifier = "") => {
+    if (otpRequired) {
+      setRequiresOTP(true);
+      setLoginIdentifier(identifier);
+    } else {
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(userData));
+      setIsAuthenticated(true);
+      setUser(userData);
+      setRequiresOTP(false);
+      setLoginIdentifier("");
+    }
+  };
+
+  const completeLogin = (token, userData) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
     setIsAuthenticated(true);
     setUser(userData);
+    setRequiresOTP(false);
+    setLoginIdentifier("");
   };
 
   const logout = () => {
-    // Clear all storage
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    sessionStorage.clear();
-
-    // Reset state
+    authService.logout();
     setIsAuthenticated(false);
     setUser(null);
-
-    // Redirect to login
+    setRequiresOTP(false);
+    setLoginIdentifier("");
     window.location.href = "/login";
   };
 
   const value = {
     isAuthenticated,
     user,
+    requiresOTP,
+    loginIdentifier,
     login,
+    completeLogin,
     logout,
     loading,
   };

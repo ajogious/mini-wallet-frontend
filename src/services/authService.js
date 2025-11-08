@@ -6,8 +6,23 @@ export const authService = {
     return response.data;
   },
 
-  login: async (credentials) => {
-    const response = await api.post("/auth/login", credentials);
+  login: async (loginData) => {
+    const response = await api.post("/auth/login", loginData);
+    return response.data;
+  },
+
+  verifyOTP: async (identifier, otp) => {
+    const response = await api.post("/auth/verify-otp", { identifier, otp });
+    return response.data;
+  },
+
+  resendOTP: async (identifier) => {
+    const response = await api.post("/auth/resend-otp", { identifier });
+    return response.data;
+  },
+
+  verifyBVN: async (bvnData) => {
+    const response = await api.post("/auth/verify-bvn", bvnData);
     return response.data;
   },
 
